@@ -1,48 +1,58 @@
 #pragma once
 
-#define MAX_BEANS 200
-#define MAX_WATER 1000
-
 #include <string>
 #include <vector>
 #include <iostream>
-#include <algorithm>
 
-class Bean {};
-class Water {};
+class Bean
+{
+public:
+    bool ground;
+    Bean() { ground = false; }
+};
+
+class Water {
+public:
+    int temperature;
+    Water() { temperature = 30; }
+};
 
 class Hopper {
 private:
-    Bean beans[MAX_BEANS];
+    std::vector<Bean> beans;
+    size_t capacity;
+    friend class CoffeeTestHarness;
 public:
-    int cur_level;
-
-    Hopper()
+    Hopper(int n = 200)
     {
-        for (int i = 0; i < MAX_BEANS; ++i) {
-            beans[i] = Bean();
-        }
-
-        cur_level = MAX_BEANS;
+        capacity = n;
+        refill();
     }
+
+    void refill() { while (beans.size() < capacity) { beans.emplace_back(); } }
+    void print() { for (int i = 0; i < cur_level(); ++i) { if (i % 10 == 0) std::cout << "*"; } }
+    int cur_level() { return beans.size(); }
+
+    std::vector<Bean> take(int amount);
 };
 
 class Reservoir {
 private:
-    Water water[MAX_WATER];
+    size_t capacity;
+    std::vector<Water> water;
+    friend class HeatSource;
+    friend class CoffeeTestHarness;
 public:
-    int cur_level;
-    int temperature;
-
-    Reservoir()
+    Reservoir(int n = 1000)
     {
-        for (int i = 0; i < MAX_WATER; ++i) {
-            water[i] = Water();
-        }
-
-        cur_level = MAX_WATER;
-        temperature = 30;
+        capacity = n;
+        refill();
     }
+
+    void refill() { while (water.size() < capacity) { water.emplace_back(); } }
+    void print() { for (int i = 0; i < cur_level(); ++i) { if (i % 10 == 0) std::cout << "*"; } }
+    int cur_level() { return water.size(); }
+    int check_temp() { return water.back().temperature; };
 
     std::vector<Water> drain(int amount);
 };
@@ -50,32 +60,36 @@ public:
 class HeatSource {
 private:
 public:
-    void heat(Reservoir &r) { r.temperature++; };
+    void heat(Reservoir &r);
 };
 
 class Grinder {
 private:
 public:
-    std::vector<Bean> grind(int amount, Hopper h);
+    void grind(std::vector<Bean> &beans);
 };
 
 class Cup {
 private:
+    friend class CoffeeTestHarness;
+    std::vector<Bean> my_beans;
 public:
     Cup()
     {
-        std::cout << "I am a cup of air!";
+        std::cout << "I am a cup of air!\n";
     }
 
     Cup(std::vector<Water> water)
     {
-        std::cout << "I am a cup of water!";
+        std::string size = (water.size() > 250) ? "big" : "small";
+        std::cout << "I am a " << size << " cup of water!\n";
     }
 
     Cup(std::vector<Water> water, std::vector<Bean> beans)
     {
         std::string quality = (water.size() == 250 && beans.size() == 50) ? "great" : "mediocre";
-        std::cout << "I am a " << quality << " cup of coffee!";
+        std::cout << "I am a " << quality << " cup of coffee!\n";
+        my_beans = beans;
     }
 };
 
@@ -85,24 +99,22 @@ private:
     Reservoir reservoir;
     HeatSource heat_source;
     Grinder grinder;
-    int order;
-public:
     std::vector<Cup> cups;
-
-    CoffeeMaker(int n)
+    int cups_requested;
+    friend class CoffeeTestHarness;
+public:
+    CoffeeMaker()
     {
-        if (n > 0 && n <= 4) {
-            // INITIALIZE OBJECTS
-            order = n;
-            hopper = Hopper();
-            reservoir = Reservoir();
-            heat_source = HeatSource();
-            grinder = Grinder();
-        } else {
-            // REJECT
-            std::cout << "INVALID NUMBER OF CUPS -- VALID: (0, 4]" << std::endl;
-        }
+        std::cout << "\n\tHello there! I make coffee.\n" << std::endl;
+
+        // INITIALIZE OBJECTS
+        hopper = Hopper();
+        reservoir = Reservoir();
+        heat_source = HeatSource();
+        grinder = Grinder();
     }
 
+    void order(int n);
     void brew();
+    std::vector<Cup> collect();
 };
